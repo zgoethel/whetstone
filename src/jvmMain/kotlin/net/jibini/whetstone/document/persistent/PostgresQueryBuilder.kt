@@ -1,41 +1,32 @@
 package net.jibini.whetstone.document.persistent
 
-import net.jibini.whetstone.document.Document
+import net.jibini.whetstone.document.table
 import java.lang.StringBuilder
-import kotlin.reflect.KClass
-import kotlin.reflect.full.findAnnotation
 
-class PostgresQueryBuilder<T : Document>(
-        override val document : KClass<T>
-) : DocumentQueryBuilder<T, String>
-{
-    private val selectBuilder = StringBuilder()
-    private val joinBuilder = StringBuilder()
-
-    private val table = document.findAnnotation<Table>()!!.tableName
-
-    override fun join(to: KClass<out Document>, on: String) : DocumentQueryBuilder<T, String>
+val DocumentJoinModel.postgresQuery: String
+    get()
     {
-        val toTable = to.findAnnotation<Table>()!!.tableName
+        val selectBuilder = StringBuilder()
+        val joinBuilder = StringBuilder()
 
-        selectBuilder.append(", jsonb_agg($toTable.data) as $toTable")
+        for (join in joins)
+        {
+            val toTable = join.to.table
+            val fromTable = join.from.table
+            val agg = join.asAggregate
 
-        if (joinBuilder.isNotEmpty())
-            joinBuilder.append('\n')
-        joinBuilder.append("left join $toTable on ($table.data->'$on') @> ($toTable.data->'_uid')")
+            selectBuilder.append(", jsonb_agg(distinct $toTable.data) as $agg")
+            joinBuilder.append("left join $toTable on ($fromTable.data->'$agg') @> ($toTable.data->'_uid')")
+                    .append('\n')
+        }
 
-        return this
+        val baseTable = base.table
+
+        return """
+select $baseTable._row, $baseTable.data$selectBuilder
+from $baseTable
+
+$joinBuilder
+group by $baseTable._row, $baseTable.data;
+        """.trim()
     }
-
-    override val built
-        get() = """
-        
-            select $table._row, $table.data$selectBuilder
-            from $table
-    
-            $joinBuilder
-            
-            group by $table._row, $table.data;
-            
-        """.trimIndent().trim()
-}
