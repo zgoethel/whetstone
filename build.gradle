@@ -48,8 +48,8 @@ kotlin {
                 implementation "io.ktor:ktor-html-builder:$ktor_version"
 
                 implementation "ch.qos.logback:logback-classic:$logback_version"
-
                 implementation 'com.beust:klaxon:5.2'
+                implementation "org.postgresql:postgresql:42.1.4"
             }
         }
 
