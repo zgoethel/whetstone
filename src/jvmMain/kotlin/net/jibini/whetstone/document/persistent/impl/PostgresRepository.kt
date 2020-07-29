@@ -1,18 +1,19 @@
 package net.jibini.whetstone.document.persistent.impl
 
-import com.beust.klaxon.Klaxon
 import net.jibini.whetstone.document.Document
 import net.jibini.whetstone.document.DocumentRepository
-import net.jibini.whetstone.document.persistent.DocumentJoin
 import net.jibini.whetstone.document.persistent.DocumentJoinModel
 import net.jibini.whetstone.document.persistent.DocumentJoinStack
 import net.jibini.whetstone.document.table
+import org.json.JSONArray
 import org.json.JSONObject
+import java.lang.IllegalStateException
 import java.sql.Connection
 import java.sql.DriverManager
 import java.util.*
-import kotlin.reflect.KClass
 
+//TODO MOVE TO IMPL CLASS, ADD INTERFACE
+//TODO FACTORY METHOD WITH REIFIED T
 class PostgresRepository<T : Document>(
     private val serverAddress: String,
     private val joinModel: DocumentJoinModel,
@@ -20,7 +21,10 @@ class PostgresRepository<T : Document>(
     username: String,
     password: String,
 
-    ssl: Boolean = true
+    ssl: Boolean = true,
+
+    private val parse: (json: String) -> T,
+    private val encode: (document: T) -> String
 ) : DocumentRepository<T>
 {
     private var connection: Connection
@@ -45,6 +49,28 @@ class PostgresRepository<T : Document>(
         )
     }
 
+    private fun recursivelyPlace(parent: JSONObject, stack: DocumentJoinStack, uidToJSON: Map<String, JSONObject>)
+    {
+        if (stack.mutableStack.size > 1)
+        {
+            val newParents = parent.getJSONArray(stack.mutableStack.first().asAggregate)
+            val shortenedStack = DocumentJoinStack(stack.mutableStack.subList(1, stack.mutableStack.size))
+
+            if (!newParents.isNull(0))
+                for (i in 0 until newParents.length())
+                    recursivelyPlace(newParents.getJSONObject(i), shortenedStack, uidToJSON)
+        } else
+        {
+            val finalArray = parent.getJSONArray(stack.mutableStack.last().asAggregate)
+
+            for (i in 0 until finalArray.length())
+            {
+                val uid = finalArray.getString(i)
+                finalArray.put(i, uidToJSON[uid])
+            }
+        }
+    }
+
     override fun retrieve(_uid: String): T
     {
         if (connection.isClosed)
@@ -56,27 +82,36 @@ class PostgresRepository<T : Document>(
         while (results.next())
         {
             val stack = DocumentJoinStack()
-            val json = JSONObject()
+            val json = JSONObject(results.getString("data"))
 
             for (join in joinModel.joins)
             {
                 stack.navigateFlat(join)
 
-                val columnName = "${stack.aggregatePrefix}${join.asAggregate}"
-                val columnString = results.getString(columnName)
-                if (columnString == "[null]")
-                    continue
+                val columnString = results.getString(stack.aggregate)
+                val columnJSON = JSONArray(columnString)
 
-                TODO("MAP INSTANCES TO THEIR _uid AND POPULATE AGGREGATES")
+                val uidToJSON = mutableMapOf<String, JSONObject>()
+
+                if (!columnJSON.isNull(0))
+                    for (i in 0 until columnJSON.length())
+                    {
+                        val entry = columnJSON.getJSONObject(i)
+                        uidToJSON[entry.getString("_uid")] = entry
+                    }
+
+                recursivelyPlace(json, stack, uidToJSON)
             }
+
+            return parse(json.toString())
         }
 
-        TODO("NOT YET IMPLEMENTED")
+        throw IllegalStateException("Requested document could not be found")
     }
 
     override fun put(document: T)
     {
-        val encoded = Klaxon().toJsonString(document)
+        val encoded = encode(document)
         val json = JSONObject(encoded)
 
         for (join in joinModel.joins)

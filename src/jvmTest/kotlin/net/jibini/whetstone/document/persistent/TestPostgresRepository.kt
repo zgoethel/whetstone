@@ -30,6 +30,7 @@ class TestPostgresRepository
         results.next()
 
         val json = JSONObject(results.getString("data"))
+        
         assertEquals("TEST_DOC", json.getString("_uid"))
         assertEquals("TEST_S_DOC", json.getJSONArray("subDocuments").getString(0))
     }
@@ -37,8 +38,16 @@ class TestPostgresRepository
     @Test
     fun generateAndSubmitJoinQuery()
     {
-        //TODO("WRITE TEST DOCUMENTS TO JOIN")
+        val statement = connection.createStatement()
+        statement.execute("""
+insert into WhTestSubDocument(data) values ('{"_uid": "TEST_S_DOC", "_rev": 0, "subSubDocuments": ["TEST_S_S_DOC"]}');
+insert into WhTestSubSubDocument(data) values ('{"_uid": "TEST_S_S_DOC", "_rev": 0}');
+        """.trimIndent().trim())
 
         val read = TestDocumentRepository.retrieve("TEST_DOC")
+
+        assertEquals(read._uid, "TEST_DOC")
+        assertEquals(read.subDocuments[0]._uid, "TEST_S_DOC")
+        assertEquals(read.subDocuments[0].subSubDocuments[0]._uid, "TEST_S_S_DOC")
     }
 }

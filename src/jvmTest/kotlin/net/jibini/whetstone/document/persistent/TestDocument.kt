@@ -1,5 +1,6 @@
 package net.jibini.whetstone.document.persistent
 
+import com.beust.klaxon.Klaxon
 import net.jibini.whetstone.document.Document
 import net.jibini.whetstone.document.DocumentRepository
 import net.jibini.whetstone.document.persistent.impl.PostgresRepository
@@ -8,7 +9,15 @@ object TestDocumentRepository : DocumentRepository<TestDocument> by PostgresRepo
     "jdbc:postgresql://localhost/postgres",
     DocumentJoinModel.buildFrom(TestDocument::class),
 
-    "whetstone", "password"
+    "whetstone", "password",
+
+    parse = {
+        Klaxon().parse<TestDocument>(it)!!
+    },
+
+    encode = {
+        Klaxon().toJsonString(it)
+    }
 )
 
 @Table("WhTestDocument")
@@ -27,7 +36,15 @@ object TestSubDocumentRepository : DocumentRepository<TestSubDocument> by Postgr
     "jdbc:postgresql://localhost/postgres",
     DocumentJoinModel.buildFrom(TestSubDocument::class),
 
-    "whetstone", "password"
+    "whetstone", "password",
+
+    parse = {
+        Klaxon().parse<TestSubDocument>(it)!!
+    },
+
+    encode = {
+        Klaxon().toJsonString(it)
+    }
 )
 
 @Table("WhTestSubDocument")
@@ -46,7 +63,15 @@ object TestSubSubDocumentRepository : DocumentRepository<TestSubSubDocument> by 
     "jdbc:postgresql://localhost/postgres",
     DocumentJoinModel.buildFrom(TestSubSubDocument::class),
 
-    "whetstone", "password"
+    "whetstone", "password",
+
+    parse = {
+        Klaxon().parse<TestSubSubDocument>(it)!!
+    },
+
+    encode = {
+        Klaxon().toJsonString(it)
+    }
 )
 
 @Table("WhTestSubSubDocument")

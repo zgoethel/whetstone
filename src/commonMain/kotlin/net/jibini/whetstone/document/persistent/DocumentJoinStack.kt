@@ -2,10 +2,8 @@ package net.jibini.whetstone.document.persistent
 
 import net.jibini.whetstone.document.table
 
-class DocumentJoinStack()
+class DocumentJoinStack(val mutableStack: MutableList<DocumentJoin> = mutableListOf())
 {
-    val mutableStack = mutableListOf<DocumentJoin>()
-
     fun navigateFlat(nextFlatValue: DocumentJoin)
     {
         if (mutableStack.isEmpty())
@@ -25,19 +23,25 @@ class DocumentJoinStack()
 
                 else -> {
                     // Pop the join stack by one level
-                    mutableStack.removeAt(mutableStack.lastIndex)
+                    while (mutableStack.last().from != nextFlatValue.from)
+                        mutableStack.removeAt(mutableStack.lastIndex)
                     mutableStack[mutableStack.lastIndex] = nextFlatValue
                 }
             }
     }
 
-    val aggregatePrefix: String
+    val aggregate: String
         get()
         {
-            val prefix = StringBuilder()
-            for (level in mutableStack)
-                prefix.append("${level.from.table}__")
+            val name = StringBuilder()
 
-            return prefix.toString()
+            for (level in mutableStack)
+            {
+                if (name.isNotEmpty())
+                    name.append("__")
+                name.append(level.asAggregate)
+            }
+
+            return name.toString()
         }
 }

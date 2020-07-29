@@ -21,8 +21,7 @@ val DocumentJoinModel.postgresQuery: String
             val fromTable = join.from.table
             val agg = join.asAggregate
 
-            selectBuilder.append(", ${PostgresRepository._sqlJSONBAgg(toTable, 
-                "${stack.aggregatePrefix}$agg")}")
+            selectBuilder.append(", ${PostgresRepository._sqlJSONBAgg(toTable, stack.aggregate)}")
             joinBuilder.append(" ${PostgresRepository._sqlJSONBJoin(toTable, agg, fromTable)}")
         }
 
