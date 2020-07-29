@@ -2,12 +2,13 @@ package net.jibini.whetstone.document.persistent
 
 import net.jibini.whetstone.document.Document
 import net.jibini.whetstone.document.DocumentRepository
+import net.jibini.whetstone.document.persistent.impl.PostgresRepository
 
 object TestDocumentRepository : DocumentRepository<TestDocument> by PostgresRepository(
-        "jdbc:postgresql://localhost/postgres",
-        DocumentJoinModel.buildFrom(TestDocument::class),
+    "jdbc:postgresql://localhost/postgres",
+    DocumentJoinModel.buildFrom(TestDocument::class),
 
-        "whetstone", "password"
+    "whetstone", "password"
 )
 
 @Table("WhTestDocument")
@@ -23,10 +24,10 @@ class TestDocument(
 
 
 object TestSubDocumentRepository : DocumentRepository<TestSubDocument> by PostgresRepository(
-        "jdbc:postgresql://localhost/postgres",
-        DocumentJoinModel.buildFrom(TestSubDocument::class),
+    "jdbc:postgresql://localhost/postgres",
+    DocumentJoinModel.buildFrom(TestSubDocument::class),
 
-        "whetstone", "password"
+    "whetstone", "password"
 )
 
 @Table("WhTestSubDocument")
@@ -42,10 +43,10 @@ class TestSubDocument(
 
 
 object TestSubSubDocumentRepository : DocumentRepository<TestSubSubDocument> by PostgresRepository(
-        "jdbc:postgresql://localhost/postgres",
-        DocumentJoinModel.buildFrom(TestSubSubDocument::class),
+    "jdbc:postgresql://localhost/postgres",
+    DocumentJoinModel.buildFrom(TestSubSubDocument::class),
 
-        "whetstone", "password"
+    "whetstone", "password"
 )
 
 @Table("WhTestSubSubDocument")

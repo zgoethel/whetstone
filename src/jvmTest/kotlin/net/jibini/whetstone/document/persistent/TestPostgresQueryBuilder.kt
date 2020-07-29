@@ -1,5 +1,6 @@
 package net.jibini.whetstone.document.persistent
 
+import net.jibini.whetstone.document.persistent.impl.postgresQuery
 import org.junit.Test
 import kotlin.test.assertTrue
 
@@ -15,11 +16,12 @@ class TestPostgresQueryBuilder
         println(query)
         println("-------------")
 
-        assertTrue(query.contains("jsonb_agg(distinct WhTestSubDocument.data) as subDocuments"))
+        assertTrue(query.contains("jsonb_agg(distinct WhTestSubDocument.data) as WhTestDocument__subDocuments"))
         assertTrue(query.contains("left join WhTestSubDocument on (WhTestDocument.data->'subDocuments') @> " +
                 "(WhTestSubDocument.data->'_uid')"))
 
-        assertTrue(query.contains("jsonb_agg(distinct WhTestSubSubDocument.data) as subSubDocuments"))
+        assertTrue(query.contains("jsonb_agg(distinct WhTestSubSubDocument.data) as WhTestDocument__" +
+                "WhTestSubDocument__subSubDocuments"))
         assertTrue(query.contains("left join WhTestSubSubDocument on (WhTestSubDocument.data->'subSubDocuments') " +
                 "@> (WhTestSubSubDocument.data->'_uid')"))
     }

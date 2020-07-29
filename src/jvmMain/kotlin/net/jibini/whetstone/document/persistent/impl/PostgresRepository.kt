@@ -1,13 +1,17 @@
-package net.jibini.whetstone.document.persistent
+package net.jibini.whetstone.document.persistent.impl
 
 import com.beust.klaxon.Klaxon
 import net.jibini.whetstone.document.Document
 import net.jibini.whetstone.document.DocumentRepository
+import net.jibini.whetstone.document.persistent.DocumentJoin
+import net.jibini.whetstone.document.persistent.DocumentJoinModel
+import net.jibini.whetstone.document.persistent.DocumentJoinStack
 import net.jibini.whetstone.document.table
 import org.json.JSONObject
 import java.sql.Connection
 import java.sql.DriverManager
 import java.util.*
+import kotlin.reflect.KClass
 
 class PostgresRepository<T : Document>(
     private val serverAddress: String,
@@ -33,7 +37,12 @@ class PostgresRepository<T : Document>(
         connection = DriverManager.getConnection(serverAddress, props)
 
         val statement = connection.createStatement()
-        statement.execute(_sqlTableCreate(joinModel.base.table, SQL_TABLE_DEFAULT_SCHEMA))
+        statement.execute(
+            _sqlTableCreate(
+                joinModel.base.table,
+                SQL_TABLE_DEFAULT_SCHEMA
+            )
+        )
     }
 
     override fun retrieve(_uid: String): T
@@ -46,10 +55,23 @@ class PostgresRepository<T : Document>(
 
         while (results.next())
         {
+            val stack = DocumentJoinStack()
+            val json = JSONObject()
 
+            for (join in joinModel.joins)
+            {
+                stack.navigateFlat(join)
+
+                val columnName = "${stack.aggregatePrefix}${join.asAggregate}"
+                val columnString = results.getString(columnName)
+                if (columnString == "[null]")
+                    continue
+
+                TODO("MAP INSTANCES TO THEIR _uid AND POPULATE AGGREGATES")
+            }
         }
 
-        TODO("ASSEMBLE JSON AND PARSE")
+        TODO("NOT YET IMPLEMENTED")
     }
 
     override fun put(document: T)
@@ -70,8 +92,12 @@ class PostgresRepository<T : Document>(
             }
 
         val statement = connection.createStatement()
-        statement.execute(_sqlRowInsert(joinModel.base.table, json.toString()
-            .replace("'", "\\'")))
+        statement.execute(
+            _sqlRowInsert(
+                joinModel.base.table, json.toString()
+                    .replace("'", "\\'")
+            )
+        )
     }
 
     companion object

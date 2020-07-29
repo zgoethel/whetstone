@@ -37,7 +37,7 @@ class TestPostgresRepository
     @Test
     fun generateAndSubmitJoinQuery()
     {
-        TODO("WRITE TEST DOCUMENTS TO JOIN")
+        //TODO("WRITE TEST DOCUMENTS TO JOIN")
 
         val read = TestDocumentRepository.retrieve("TEST_DOC")
     }
