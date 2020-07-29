@@ -17,6 +17,6 @@ interface DocumentCache<T : Document> : DocumentRepository<T>
     fun put(_uid: String, document: T, checkRev: Boolean)
     {
         if (!checkRev || document._rev > retrieve(_uid)._rev)
-            put(_uid, document)
+            put(document)
     }
 }

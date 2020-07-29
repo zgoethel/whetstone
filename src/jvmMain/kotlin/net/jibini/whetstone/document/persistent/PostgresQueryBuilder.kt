@@ -15,18 +15,11 @@ val DocumentJoinModel.postgresQuery: String
             val fromTable = join.from.table
             val agg = join.asAggregate
 
-            selectBuilder.append(", jsonb_agg(distinct $toTable.data) as $agg")
-            joinBuilder.append("left join $toTable on ($fromTable.data->'$agg') @> ($toTable.data->'_uid')")
-                    .append('\n')
+
+            selectBuilder.append(", ${PostgresRepository._sqlJSONBAgg(toTable, agg)}")
+            joinBuilder.append(" ${PostgresRepository._sqlJSONBJoin(toTable, agg, fromTable)}")
         }
 
-        val baseTable = base.table
-
-        return """
-select $baseTable._row, $baseTable.data$selectBuilder
-from $baseTable
-
-$joinBuilder
-group by $baseTable._row, $baseTable.data;
-        """.trim()
+        return PostgresRepository._sqlRowSelect(base.table, selectBuilder.toString().trim(),
+            joinBuilder.toString().trim())
     }

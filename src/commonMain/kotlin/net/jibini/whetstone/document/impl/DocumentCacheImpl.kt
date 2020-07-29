@@ -24,12 +24,12 @@ class DocumentCacheImpl<T : Document>(
         return internalCache[_uid]!!._origin
     }
 
-    override fun put(_uid: String, document: T)
+    override fun put(document: T)
     {
-        if (!has(_uid))
-            internalCache[_uid] = DecoratedDocument(document, -1L)
+        if (!has(document._uid))
+            internalCache[document._uid] = DecoratedDocument(document, -1L)
         else
-            internalCache[_uid]!!._origin = document
+            internalCache[document._uid]!!._origin = document
     }
 
     override fun has(_uid: String) = internalCache.containsKey(_uid)
