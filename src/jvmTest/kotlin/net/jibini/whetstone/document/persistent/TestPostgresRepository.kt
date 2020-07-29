@@ -30,7 +30,7 @@ class TestPostgresRepository
         results.next()
 
         val json = JSONObject(results.getString("data"))
-        
+
         assertEquals("TEST_DOC", json.getString("_uid"))
         assertEquals("TEST_S_DOC", json.getJSONArray("subDocuments").getString(0))
     }

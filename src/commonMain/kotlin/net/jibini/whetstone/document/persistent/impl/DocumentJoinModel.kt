@@ -1,6 +1,7 @@
-package net.jibini.whetstone.document.persistent
+package net.jibini.whetstone.document.persistent.impl
 
 import net.jibini.whetstone.document.Document
+import net.jibini.whetstone.document.persistent.Join
 import kotlin.reflect.KClass
 
 class DocumentJoinModel(
@@ -32,9 +33,18 @@ class DocumentJoinModel(
                     {
                         @Suppress("UNCHECKED_CAST")
                         val to = member.returnType.arguments[0].type?.classifier as KClass<out Document>
-                        created.join(DocumentJoin(base, to, member.name))
+                        created.join(
+                            DocumentJoin(
+                                base,
+                                to,
+                                member.name
+                            )
+                        )
 
-                        val subModel = buildFrom(to)
+                        val subModel =
+                            buildFrom(
+                                to
+                            )
                         created.merge(subModel)
                     }
 

@@ -1,7 +1,5 @@
 package net.jibini.whetstone.document.persistent.impl
 
-import net.jibini.whetstone.document.persistent.DocumentJoinModel
-import net.jibini.whetstone.document.persistent.DocumentJoinStack
 import net.jibini.whetstone.document.table
 import java.lang.StringBuilder
 
@@ -21,10 +19,10 @@ val DocumentJoinModel.postgresQuery: String
             val fromTable = join.from.table
             val agg = join.asAggregate
 
-            selectBuilder.append(", ${PostgresRepository._sqlJSONBAgg(toTable, stack.aggregate)}")
-            joinBuilder.append(" ${PostgresRepository._sqlJSONBJoin(toTable, agg, fromTable)}")
+            selectBuilder.append(", ${PostgresRepositoryImpl._sqlJSONBAgg(toTable, stack.aggregate)}")
+            joinBuilder.append(" ${PostgresRepositoryImpl._sqlJSONBJoin(toTable, agg, fromTable)}")
         }
 
-        return PostgresRepository._sqlRowSelect(base.table, selectBuilder.toString().trim(),
+        return PostgresRepositoryImpl._sqlRowSelect(base.table, selectBuilder.toString().trim(),
             joinBuilder.toString().trim())
     }

@@ -2,8 +2,6 @@ package net.jibini.whetstone.document.persistent.impl
 
 import net.jibini.whetstone.document.Document
 import net.jibini.whetstone.document.DocumentRepository
-import net.jibini.whetstone.document.persistent.DocumentJoinModel
-import net.jibini.whetstone.document.persistent.DocumentJoinStack
 import net.jibini.whetstone.document.table
 import org.json.JSONArray
 import org.json.JSONObject
@@ -12,16 +10,14 @@ import java.sql.Connection
 import java.sql.DriverManager
 import java.util.*
 
-//TODO MOVE TO IMPL CLASS, ADD INTERFACE
-//TODO FACTORY METHOD WITH REIFIED T
-class PostgresRepository<T : Document>(
+class PostgresRepositoryImpl<T : Document>(
     private val serverAddress: String,
     private val joinModel: DocumentJoinModel,
 
     username: String,
     password: String,
 
-    ssl: Boolean = true,
+    ssl: Boolean,
 
     private val parse: (json: String) -> T,
     private val encode: (document: T) -> String
@@ -54,7 +50,12 @@ class PostgresRepository<T : Document>(
         if (stack.mutableStack.size > 1)
         {
             val newParents = parent.getJSONArray(stack.mutableStack.first().asAggregate)
-            val shortenedStack = DocumentJoinStack(stack.mutableStack.subList(1, stack.mutableStack.size))
+            val shortenedStack = DocumentJoinStack(
+                stack.mutableStack.subList(
+                    1,
+                    stack.mutableStack.size
+                )
+            )
 
             if (!newParents.isNull(0))
                 for (i in 0 until newParents.length())

@@ -1,4 +1,4 @@
-package net.jibini.whetstone.document.persistent
+package net.jibini.whetstone.document.persistent.impl
 
 import net.jibini.whetstone.document.Document
 import kotlin.reflect.KClass

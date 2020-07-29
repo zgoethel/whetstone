@@ -1,6 +1,4 @@
-package net.jibini.whetstone.document.persistent
-
-import net.jibini.whetstone.document.table
+package net.jibini.whetstone.document.persistent.impl
 
 class DocumentJoinStack(val mutableStack: MutableList<DocumentJoin> = mutableListOf())
 {

@@ -1,5 +1,6 @@
 package net.jibini.whetstone.document.persistent
 
+import net.jibini.whetstone.document.persistent.impl.DocumentJoinModel
 import net.jibini.whetstone.document.persistent.impl.postgresQuery
 import org.junit.Test
 import kotlin.test.assertTrue
