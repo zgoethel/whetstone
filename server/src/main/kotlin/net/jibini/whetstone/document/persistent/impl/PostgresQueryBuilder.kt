@@ -4,13 +4,15 @@ import net.jibini.whetstone.document.table
 import java.lang.StringBuilder
 
 val DocumentJoinModel.postgresQuery: String
-    get() {
+    get()
+    {
         val selectBuilder = StringBuilder()
         val joinBuilder = StringBuilder()
 
         val stack = DocumentJoinStack()
 
-        for (join in joins) {
+        for (join in joins)
+        {
             stack.navigateFlat(join)
 
             val toTable = join.to.table

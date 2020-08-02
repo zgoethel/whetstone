@@ -5,6 +5,7 @@ import net.jibini.whetstone.document.DocumentRepository
 import net.jibini.whetstone.document.table
 import org.json.JSONArray
 import org.json.JSONObject
+import org.slf4j.LoggerFactory
 import java.lang.IllegalStateException
 import java.sql.Connection
 import java.sql.DriverManager
@@ -21,11 +22,15 @@ class PostgresRepositoryImpl<T : Document>(
 
     private val parse: (json: String) -> T,
     private val encode: (document: T) -> String
-) : DocumentRepository<T> {
+) : DocumentRepository<T>
+{
+    private val log = LoggerFactory.getLogger(this::class.simpleName)
+
     private var connection: Connection
     private val props = Properties()
 
-    init {
+    init
+    {
         Class.forName("org.postgresql.Driver")
 
         props["user"] = username
@@ -36,38 +41,52 @@ class PostgresRepositoryImpl<T : Document>(
 
         val statement = connection.createStatement()
         statement.execute(_sqlTableCreate(joinModel.base.table, SQL_TABLE_DEFAULT_SCHEMA))
+
+        log.info("Persistence engine for '${joinModel.base.table}' enabled")
     }
 
-    private fun recursivelyPlace(parent: JSONObject, stack: DocumentJoinStack, uidToJSON: Map<String, JSONObject>) {
-        if (stack.mutableStack.size > 1) {
+    private fun recursivelyPlace(parent: JSONObject, stack: DocumentJoinStack, uidToJSON: Map<String, JSONObject>)
+    {
+        if (stack.mutableStack.size > 1)
+        {
             val newParents = parent.getJSONArray(stack.mutableStack.first().asAggregate)
             val shortenedStack = DocumentJoinStack(stack.mutableStack.subList(1, stack.mutableStack.size))
 
             if (!newParents.isNull(0))
                 for (i in 0 until newParents.length())
                     recursivelyPlace(newParents.getJSONObject(i), shortenedStack, uidToJSON)
-        } else {
+        } else
+        {
             val finalArray = parent.getJSONArray(stack.mutableStack.last().asAggregate)
 
-            for (i in 0 until finalArray.length()) {
+            for (i in 0 until finalArray.length())
+            {
                 val uid = finalArray.getString(i)
+                //TODO REV CHECK
                 finalArray.put(i, uidToJSON[uid])
             }
         }
     }
 
-    override fun retrieve(_uid: String): T {
-        if (connection.isClosed)
+    //TODO DOCUMENT LIST VIA REQUEST/QUERY
+    override fun retrieve(_uid: String): T
+    {
+        if (!connection.isValid(2))
+        {
+            log.info("Connection to '${joinModel.base.table}' is invalid or timed out; re-opening")
             connection = DriverManager.getConnection(serverAddress, props)
+        }
 
         val statement = connection.createStatement()
         val results = statement.executeQuery(joinModel.postgresQuery)
 
-        while (results.next()) {
+        while (results.next())
+        {
             val stack = DocumentJoinStack()
             val json = JSONObject(results.getString("data"))
 
-            for (join in joinModel.joins) {
+            for (join in joinModel.joins)
+            {
                 stack.navigateFlat(join)
 
                 val columnString = results.getString(stack.aggregate)
@@ -76,7 +95,8 @@ class PostgresRepositoryImpl<T : Document>(
                 val uidToJSON = mutableMapOf<String, JSONObject>()
 
                 if (!columnJSON.isNull(0))
-                    for (i in 0 until columnJSON.length()) {
+                    for (i in 0 until columnJSON.length())
+                    {
                         val entry = columnJSON.getJSONObject(i)
                         uidToJSON[entry.getString("_uid")] = entry
                     }
@@ -84,18 +104,22 @@ class PostgresRepositoryImpl<T : Document>(
                 recursivelyPlace(json, stack, uidToJSON)
             }
 
+            //TODO DOCUMENT LIST VIA REQUEST/QUERY
             return parse(json.toString())
         }
 
+        //TODO BLANK LIST, NOT ERROR
         throw IllegalStateException("Requested document could not be found")
     }
 
-    override fun put(document: T) {
+    override fun put(document: T)
+    {
         val encoded = encode(document)
         val json = JSONObject(encoded)
 
         for (join in joinModel.joins)
-            if (join.from == joinModel.base) {
+            if (join.from == joinModel.base)
+            {
                 val uidReplacement = mutableListOf<String>()
                 val fullArray = json.getJSONArray(join.asAggregate)
 
@@ -106,15 +130,12 @@ class PostgresRepositoryImpl<T : Document>(
             }
 
         val statement = connection.createStatement()
-        statement.execute(
-            _sqlRowInsert(
-                joinModel.base.table, json.toString()
-                    .replace("'", "\\'")
-            )
-        )
+        statement.execute(_sqlRowInsert(joinModel.base.table, json.toString()
+            .replace("'", "\\'")))
     }
 
-    companion object {
+    companion object
+    {
         /*
          * SQL TEMPLATES
          */

@@ -6,24 +6,35 @@ import org.junit.Test
 import java.sql.DriverManager
 import kotlin.test.assertEquals
 
-class TestPostgresRepository {
+class TestPostgresRepository
+{
     private val connection = DriverManager.getConnection(
         "jdbc:postgresql://localhost/postgres",
         "whetstone", "password"
     )!!
 
     @Before
-    fun ensureRepositoriesInMemory() {
+    fun ensureRepositoriesInMemory()
+    {
         TestDocumentRepository
         TestSubDocumentRepository
         TestSubSubDocumentRepository
     }
 
     @Test
-    fun stripJoinedData() {
+    fun stripJoinedData()
+    {
         TestDocumentRepository.put(
-            TestDocument("TEST_DOC", 0, mutableListOf(TestSubDocument("TEST_S_DOC", 0, mutableListOf(
-                TestSubSubDocument("TEST_S_S_DOC", 0))))) )
+            TestDocument(
+                "TEST_DOC", 0, mutableListOf(
+                    TestSubDocument(
+                        "TEST_S_DOC", 0, mutableListOf(
+                            TestSubSubDocument("TEST_S_S_DOC", 0)
+                        )
+                    )
+                )
+            )
+        )
 
         val statement = connection.createStatement()
         val results = statement.executeQuery("select * from WhTestDocument order by _row desc limit 1;")
@@ -36,7 +47,8 @@ class TestPostgresRepository {
     }
 
     @Test
-    fun generateAndSubmitJoinQuery() {
+    fun generateAndSubmitJoinQuery()
+    {
         val statement = connection.createStatement()
         statement.execute(
             """

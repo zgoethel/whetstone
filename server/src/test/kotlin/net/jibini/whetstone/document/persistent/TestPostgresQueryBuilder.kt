@@ -5,9 +5,11 @@ import net.jibini.whetstone.document.persistent.impl.postgresQuery
 import org.junit.Test
 import kotlin.test.assertTrue
 
-class TestPostgresQueryBuilder {
+class TestPostgresQueryBuilder
+{
     @Test
-    fun createQueryForDocument() {
+    fun createQueryForDocument()
+    {
         val joinModel = DocumentJoinModel.buildFrom(TestDocument::class)
         val query = joinModel.postgresQuery
 

@@ -6,8 +6,10 @@ import net.jibini.whetstone.document.DocumentRepository
 import net.jibini.whetstone.document.persistent.impl.DocumentJoinModel
 import net.jibini.whetstone.document.persistent.impl.PostgresRepositoryImpl
 
-interface PostgresRepository<T : Document> : DocumentRepository<T> {
-    companion object {
+interface PostgresRepository<T : Document> : DocumentRepository<T>
+{
+    companion object
+    {
         inline fun <reified T : Document> create(
             serverAddress: String,
 

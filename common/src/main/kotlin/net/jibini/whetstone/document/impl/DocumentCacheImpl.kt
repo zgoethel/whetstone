@@ -6,11 +6,15 @@ import net.jibini.whetstone.document.DocumentRepository
 
 class DocumentCacheImpl<T : Document>(
     override val persistent: DocumentRepository<T>?
-) : DocumentCache<T> {
+) : DocumentCache<T>
+{
     private val internalCache = mutableMapOf<String, DecoratedDocument<T>>()
 
-    override fun retrieve(_uid: String): T {
-        if (!has(_uid)) {
+    //TODO SHALLOW CHECK OF UIDs TO LOAD (PARTIAL CACHE OF QUERY)
+    override fun retrieve(_uid: String): T
+    {
+        if (!has(_uid))
+        {
             if (persistent == null)
                 throw IllegalStateException(
                     "Attempting to retrieve an un-cached document '$_uid' with no persistent" +
@@ -23,20 +27,32 @@ class DocumentCacheImpl<T : Document>(
         return internalCache[_uid]!!._origin
     }
 
-    override fun put(document: T) {
-        if (!has(document._uid))
-            internalCache[document._uid] = DecoratedDocument(document, -1L)
-        else
+    override fun put(document: T)
+    {
+        if (has(document._uid))
             internalCache[document._uid]!!._origin = document
+        else
+            internalCache[document._uid] = DecoratedDocument(document, -1L)
+
+        val stored = internalCache[document._uid]!!
+        stored._rev++
+
+        if (persistent != null)
+        {
+            persistent.put(stored._origin)
+            stored._lastWritten = stored._rev
+        }
     }
 
     override fun has(_uid: String) = internalCache.containsKey(_uid)
 
     override val unwritten: List<T>
-        get() {
+        get()
+        {
             val unwritten = mutableListOf<T>()
 
-            for (cached in internalCache.values) {
+            for (cached in internalCache.values)
+            {
                 if (cached._rev > cached._lastWritten)
                     unwritten += cached._origin
             }
