@@ -1,2 +1,5 @@
-rootProject.name = 'whetstone'
+rootProject.name = "whetstone"
+
+include "server"
+include 'common'
 
