@@ -1,7 +1,7 @@
 package net.jibini.whetstone.document.persistent.impl
 
 import net.jibini.whetstone.document.Document
-import net.jibini.whetstone.document.DocumentRepository
+import net.jibini.whetstone.document.persistent.PostgresRepository
 import net.jibini.whetstone.document.table
 import org.json.JSONArray
 import org.json.JSONObject
@@ -21,7 +21,7 @@ class PostgresRepositoryImpl<T : Document>(
 
     private val parse: (json: String) -> T,
     private val encode: (document: T) -> String
-) : DocumentRepository<T>
+) : PostgresRepository<T>
 {
     private var connection: Connection
     private val props = Properties()
@@ -72,9 +72,10 @@ class PostgresRepositoryImpl<T : Document>(
         }
     }
 
+    //TODO MULTIPLE RESULTS/QUERIES - NOT IMPORTANT FOR BASIC PERSISTENCE
     override fun retrieve(_uid: String): T
     {
-        if (connection.isClosed)
+        if (!connection.isValid(2))
             connection = DriverManager.getConnection(serverAddress, props)
 
         val statement = connection.createStatement()
@@ -98,7 +99,17 @@ class PostgresRepositoryImpl<T : Document>(
                     for (i in 0 until columnJSON.length())
                     {
                         val entry = columnJSON.getJSONObject(i)
-                        uidToJSON[entry.getString("_uid")] = entry
+                        val rev = entry.getInt("_rev")
+                        val uid = entry.getString("_uid")
+
+                        val insert = when
+                        {
+                            uidToJSON.containsKey(uid) -> (rev > uidToJSON[uid]!!.getInt("_rev"))
+                            else -> true
+                        }
+
+                        if (insert)
+                            uidToJSON[entry.getString("_uid")] = entry
                     }
 
                 recursivelyPlace(json, stack, uidToJSON)
@@ -153,7 +164,8 @@ class PostgresRepositoryImpl<T : Document>(
         fun _sqlRowInsert(tableName: String, json: String) = String.format(SQL_ROW_INSERT, tableName, json)
 
         // Table name, additional selects (comma delimited), left joins (separate with space)
-        const val SQL_ROW_SELECT = "select %1\$s._row, %1\$s.data%2\$s from %1\$s %3\$s group by %1\$s._row, %1\$s.data"
+        const val SQL_ROW_SELECT = "select %1\$s._row, %1\$s.data%2\$s from %1\$s %3\$s group by %1\$s._row, %1\$s.data" +
+                " order by _row desc limit 1;"
         fun _sqlRowSelect(tableName: String, selects: String, joins: String) =
             String.format(SQL_ROW_SELECT, tableName, selects, joins)
 
