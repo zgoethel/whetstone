@@ -1,0 +1,186 @@
+package net.jibini.whetstone.document.persistent.impl
+
+import net.jibini.whetstone.document.Document
+import net.jibini.whetstone.document.persistent.PostgresRepository
+import net.jibini.whetstone.document.table
+import org.json.JSONArray
+import org.json.JSONObject
+import org.slf4j.LoggerFactory
+import java.lang.IllegalStateException
+import java.sql.Connection
+import java.sql.DriverManager
+import java.util.*
+
+class PostgresRepositoryImpl<T : Document>(
+    private val serverAddress: String,
+    private val joinModel: DocumentJoinModel,
+
+    username: String,
+    password: String,
+
+    ssl: Boolean,
+
+    private val parse: (json: String) -> T,
+    private val encode: (document: T) -> String
+) : PostgresRepository<T>
+{
+    private val log = LoggerFactory.getLogger(this::class.simpleName)
+
+    private var connection: Connection
+    private val props = Properties()
+
+    init
+    {
+        Class.forName("org.postgresql.Driver")
+
+        props["user"] = username
+        props["password"] = password
+        props["ssl"] = ssl
+
+        connection = DriverManager.getConnection(serverAddress, props)
+
+        val statement = connection.createStatement()
+        statement.execute(_sqlTableCreate(joinModel.base.table, SQL_TABLE_DEFAULT_SCHEMA))
+
+        log.info("Persistence engine for '${joinModel.base.table}' enabled")
+    }
+
+    private fun recursivelyPlace(parent: JSONObject, stack: DocumentJoinStack, uidToJSON: Map<String, JSONObject>)
+    {
+        if (stack.mutableStack.size > 1)
+        {
+            val newParents = parent.getJSONArray(stack.mutableStack.first().asAggregate)
+            val shortenedStack = DocumentJoinStack(stack.mutableStack.subList(1, stack.mutableStack.size))
+
+            if (!newParents.isNull(0))
+                for (i in 0 until newParents.length())
+                    recursivelyPlace(newParents.getJSONObject(i), shortenedStack, uidToJSON)
+        } else
+        {
+            val finalArray = parent.getJSONArray(stack.mutableStack.last().asAggregate)
+
+            for (i in 0 until finalArray.length())
+            {
+                val uid = finalArray.getString(i)
+                //TODO REV CHECK
+                finalArray.put(i, uidToJSON[uid])
+            }
+        }
+    }
+
+<<<<<<< HEAD:server/src/main/kotlin/net/jibini/whetstone/document/persistent/impl/PostgresRepositoryImpl.kt.old
+    //TODO MULTIPLE RESULTS/QUERIES - NOT IMPORTANT FOR BASIC PERSISTENCE
+    override fun retrieve(_uid: String): T
+    {
+        if (!connection.isValid(2))
+=======
+    //TODO DOCUMENT LIST VIA REQUEST/QUERY
+    override fun retrieve(_uid: String): T
+    {
+        if (!connection.isValid(2))
+        {
+            log.info("Connection to '${joinModel.base.table}' is invalid or timed out; re-opening")
+>>>>>>> ad73f75c05065fe6fc09bf2e22f176853a0af50c:server/src/main/kotlin/net/jibini/whetstone/document/persistent/impl/PostgresRepositoryImpl.kt
+            connection = DriverManager.getConnection(serverAddress, props)
+        }
+
+        val statement = connection.createStatement()
+        val results = statement.executeQuery(joinModel.postgresQuery)
+
+        while (results.next())
+        {
+            val stack = DocumentJoinStack()
+            val json = JSONObject(results.getString("data"))
+
+            for (join in joinModel.joins)
+            {
+                stack.navigateFlat(join)
+
+                val columnString = results.getString(stack.aggregate)
+                val columnJSON = JSONArray(columnString)
+
+                val uidToJSON = mutableMapOf<String, JSONObject>()
+
+                if (!columnJSON.isNull(0))
+                    for (i in 0 until columnJSON.length())
+                    {
+                        val entry = columnJSON.getJSONObject(i)
+                        val rev = entry.getInt("_rev")
+                        val uid = entry.getString("_uid")
+
+                        val insert = when
+                        {
+                            uidToJSON.containsKey(uid) -> (rev > uidToJSON[uid]!!.getInt("_rev"))
+                            else -> true
+                        }
+
+                        if (insert)
+                            uidToJSON[entry.getString("_uid")] = entry
+                    }
+
+                recursivelyPlace(json, stack, uidToJSON)
+            }
+
+            //TODO DOCUMENT LIST VIA REQUEST/QUERY
+            return parse(json.toString())
+        }
+
+        //TODO BLANK LIST, NOT ERROR
+        throw IllegalStateException("Requested document could not be found")
+    }
+
+    override fun put(document: T)
+    {
+        val encoded = encode(document)
+        val json = JSONObject(encoded)
+
+        for (join in joinModel.joins)
+            if (join.from == joinModel.base)
+            {
+                val uidReplacement = mutableListOf<String>()
+                val fullArray = json.getJSONArray(join.asAggregate)
+
+                for (i in 0 until fullArray.length())
+                    uidReplacement += fullArray.getJSONObject(i).getString("_uid")
+
+                json.put(join.asAggregate, uidReplacement)
+            }
+
+        val statement = connection.createStatement()
+        statement.execute(_sqlRowInsert(joinModel.base.table, json.toString()
+            .replace("'", "\\'")))
+    }
+
+    companion object
+    {
+        /*
+         * SQL TEMPLATES
+         */
+
+        // Table name, schema
+        const val SQL_TABLE_CREATE = "create table if not exists %s(%s);"
+        fun _sqlTableCreate(tableName: String, schema: String) = String.format(SQL_TABLE_CREATE, tableName, schema)
+
+        const val SQL_TABLE_DEFAULT_SCHEMA = "_row serial primary key, data jsonb"
+
+        // Table name, JSON string
+        const val SQL_ROW_INSERT = "insert into %s(data) values ('%s')"
+        fun _sqlRowInsert(tableName: String, json: String) = String.format(SQL_ROW_INSERT, tableName, json)
+
+        // Table name, additional selects (comma delimited), left joins (separate with space)
+        const val SQL_ROW_SELECT = "select %1\$s._row, %1\$s.data%2\$s from %1\$s %3\$s group by %1\$s._row, %1\$s.data" +
+                " order by _row desc limit 1;"
+        fun _sqlRowSelect(tableName: String, selects: String, joins: String) =
+            String.format(SQL_ROW_SELECT, tableName, selects, joins)
+
+        // Joined table name, aggregation name
+        const val SQL_JSONB_AGG = "jsonb_agg(distinct %s.data) as %s"
+        fun _sqlJSONBAgg(joinedTable: String, aggregation: String) =
+            String.format(SQL_JSONB_AGG, joinedTable, aggregation)
+
+        // Joined table name, aggregation name, original table name
+        const val SQL_JSONB_JOIN = "left join %1\$s on (%3\$s.data->'%2\$s') @> (%1\$s.data->'_uid')"
+        fun _sqlJSONBJoin(joinedTable: String, aggregation: String, base: String) =
+            String.format(SQL_JSONB_JOIN, joinedTable, aggregation, base)
+    }
+}
