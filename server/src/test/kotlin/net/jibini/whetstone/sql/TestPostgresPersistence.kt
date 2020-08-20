@@ -46,14 +46,19 @@ interface ComplexDocument : Document
     @Adjacent(SimpleDocumentPersistence::class)
     var document: SimpleDocument?
 
+    @Adjacent(SimpleDocumentPersistence::class)
+    var documentList: MutableList<SimpleDocument>
+
     companion object
     {
         fun create(
             _uid: String,
             _rev: Int,
 
-            document: SimpleDocument
-        ): ComplexDocument = ComplexDocumentImpl(_uid, _rev, document)
+            document: SimpleDocument?,
+
+            documentList: MutableList<SimpleDocument> = mutableListOf()
+        ): ComplexDocument = ComplexDocumentImpl(_uid, _rev, document, documentList)
     }
 }
 
@@ -61,7 +66,9 @@ class ComplexDocumentImpl(
     override val _uid: String = "",
     override var _rev: Int = 0,
 
-    override var document: SimpleDocument? = null
+    override var document: SimpleDocument? = null,
+
+    override var documentList: MutableList<SimpleDocument> = mutableListOf()
 ) : ComplexDocument
 
 object ComplexDocumentRepository : Repository<ComplexDocument> by Repository.create(
@@ -179,5 +186,41 @@ class TestPostgresPersistence
         complexRead.document!!.number++
         Assert.assertEquals(complexRead.document!!.number, SimpleDocumentPersistence.tank.last
             { it._uid == "simple" }.number)
+    }
+
+    @Test
+    fun readWriteComplexAdjacentValueList()
+    {
+        val numberA = Random().nextInt()
+        val numberB = Random().nextInt()
+
+        ComplexDocumentRepository.put(ComplexDocument.create(
+            "with-list",
+            0,
+
+            document = SimpleDocumentPersistence.tank.findLast { it._uid == "simple" },
+
+            documentList = mutableListOf(
+                SimpleDocument.create(
+                    "simpleA",
+                    0,
+                    numberA
+                ),
+
+                SimpleDocument.create(
+                    "simpleB",
+                    0,
+                    numberB
+                )
+            )
+        ))
+
+        val read = ComplexDocumentRepository.retrieve("with-list")!!
+
+        Assert.assertEquals(numberA, read.documentList[0].number)
+        Assert.assertEquals(numberB, read.documentList[1].number)
+
+        Assert.assertEquals(numberA, SimpleDocumentPersistence.tank.last { it._uid == "simpleA" }.number)
+        Assert.assertEquals(numberB, SimpleDocumentPersistence.tank.last { it._uid == "simpleB" }.number)
     }
 }

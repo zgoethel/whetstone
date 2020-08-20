@@ -7,11 +7,12 @@ import net.jibini.whetstone.Adjacent
 import net.jibini.whetstone.AdjacentPersistence
 import net.jibini.whetstone.Document
 import net.jibini.whetstone.proxy.Proxy
+import java.lang.reflect.ParameterizedType
 import kotlin.reflect.KClass
 import kotlin.reflect.KMutableProperty
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.memberProperties
-import kotlin.reflect.jvm.javaSetter
+import kotlin.reflect.jvm.javaType
 
 abstract class AbstractAdjacentPersistence<T : Document>(
     private val documentClass: KClass<T>,
@@ -48,7 +49,7 @@ abstract class AbstractAdjacentPersistence<T : Document>(
                         encoded[property.name] = get._uid
                     }
 
-                    // Write list of adjacent document to persistence
+                    // Write list of adjacent documents to persistence
                     get is Iterable<*> -> {
                         encoded[property.name] = JsonArray<String>()
 
@@ -123,12 +124,13 @@ abstract class AbstractAdjacentPersistence<T : Document>(
                     if (propertyValue is MutableList<*>)
                     {
                         // Find generic type parameter of mutable list (dirty)
-                        val subClass = property.javaSetter!!.parameterTypes[0]
+                        val subClass = (property.returnType.javaType as ParameterizedType)
+                            .actualTypeArguments[0] as Class<*>
 
                         for (name in names)
                             // Link each adjacent document as a proxy to its persistence object
-                            MutableList::class.java
-                                .getMethod("add")
+                            MutableList::class.java.methods
+                                .find { it.name == "add" && it.parameters.size == 1 }!!
                                 .invoke(propertyValue, Proxy.create<Any>(subClass.kotlin) {
                                     adjacent.tank.last { it._uid == name }
                                 })
