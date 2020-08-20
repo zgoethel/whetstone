@@ -27,8 +27,6 @@ class RepositoryImpl<T : Document>(
 
     override fun put(value: T)
     {
-        value._rev++
-
         persistence.writeThrough(value)
     }
 }

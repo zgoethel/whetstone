@@ -12,12 +12,12 @@ class LoggerImpl(private val owner: KClass<*>) : Logger
 
     override fun error(thrown: Throwable)
     {
-        kotlin.error(thrown)
+        thrown.printStackTrace()
     }
 
     override fun error(message: String)
     {
-        kotlin.error("${owner.simpleName} INFO - $message")
+        System.err.println("${owner.simpleName} ERROR - $message")
     }
 
     override fun debug(message: String)

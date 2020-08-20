@@ -20,6 +20,7 @@ abstract class AbstractAdjacentPersistence<T : Document>(
     private val encode: (document: Document) -> JsonObject
 ) : AdjacentPersistence<T>
 {
+    @Suppress("UNCHECKED_CAST")
     override fun stripAndDistribute(document: T): JsonObject
     {
         val members = documentClass.memberProperties
@@ -68,6 +69,7 @@ abstract class AbstractAdjacentPersistence<T : Document>(
         return encoded
     }
 
+    @Suppress("UNCHECKED_CAST")
     override fun fillOut(json: JsonObject): T
     {
         val members = documentClass.memberProperties
@@ -76,7 +78,7 @@ abstract class AbstractAdjacentPersistence<T : Document>(
         // Duplicate JSON object so it can be parsed into an empty document
         val stripped = Parser
             .default()
-            .parse(StringBuilder(json.toString())) as JsonObject
+            .parse(StringBuilder(json.toJsonString())) as JsonObject
 
         // Find and remove references to linked document names
         for (property in members)
@@ -97,7 +99,7 @@ abstract class AbstractAdjacentPersistence<T : Document>(
         // Parse an empty document with no joins yet
         val parsed = try
         {
-            parse(stripped.toString())
+            parse(stripped.toJsonString())
         } catch (thrown: Throwable)
         {
             throw IllegalStateException("Parsing of stripped object failed; check that all adjacent objects have " +

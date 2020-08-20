@@ -6,6 +6,7 @@ import net.jibini.whetstone.Document
 import net.jibini.whetstone.impl.AbstractAdjacentPersistence
 import net.jibini.whetstone.logging.Logger
 import net.jibini.whetstone.sql.PostgresPersistence
+import java.lang.IllegalStateException
 import java.sql.Connection
 import java.sql.DriverManager
 import java.util.*
@@ -39,8 +40,8 @@ class PostgresPersistenceImpl<T : Document>(
             return _connection
         }
 
-    private lateinit var _tank: MutableList<T>
-    private lateinit var _connection: Connection
+    private var _tank: MutableList<T>
+    private var _connection: Connection
 
     private val properties = Properties()
 
@@ -65,18 +66,23 @@ class PostgresPersistenceImpl<T : Document>(
             .createStatement()
             .executeQuery(String.format(SQL_QUERY_SELECT_ALL, table))
 
-        while (results.next())
-        {
-            val data = Parser
-                .default()
-                .parse(StringBuilder(results.getString("data"))) as JsonObject
-
-            
-        }
-
+        logger.debug("Filling out the tank's adjacent proxy links . . .")
         _tank = mutableListOf()
 
-        TODO("PARSE/LINK ALL MASS-LOADED VALUES")
+        while (results.next())
+            try
+            {
+                val data = Parser
+                    .default()
+                    .parse(StringBuilder(results.getString("data"))) as JsonObject
+
+                val filled = fillOut(data)
+                _tank.add(filled)
+            } catch (ex: IllegalStateException)
+            {
+                logger.error("Skipping over malformed database entry ${results.getString("data")}")
+                logger.error(ex)
+            }
     }
 
     override fun writeThrough(value: T)
@@ -87,13 +93,15 @@ class PostgresPersistenceImpl<T : Document>(
             _connection = DriverManager.getConnection(serverAddress, properties)
         }
 
-        val json = encode(value)
+        value._rev++
 
-        TODO("WRITE THROUGH DATA TO ADJACENT")
+        val strippedString = stripAndDistribute(value)
+        _tank.add(fillOut(strippedString))
 
         _connection
             .createStatement()
-            .execute(String.format(SQL_QUERY_PUT_VALUE, table, json.toString().replace("'", "''")))
+            .execute(String.format(SQL_QUERY_PUT_VALUE, table, strippedString.toJsonString()
+                .replace("'", "''")))
     }
 
     companion object

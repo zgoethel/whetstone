@@ -1,6 +1,8 @@
 package net.jibini.whetstone.sql
 
+import com.beust.klaxon.JsonObject
 import com.beust.klaxon.Klaxon
+import com.beust.klaxon.Parser
 import net.jibini.whetstone.AdjacentPersistence
 import net.jibini.whetstone.Document
 import net.jibini.whetstone.sql.impl.PostgresPersistenceImpl
@@ -12,7 +14,7 @@ interface PostgresPersistence<T : Document> : AdjacentPersistence<T>
 
     companion object
     {
-        inline fun <reified T : Document> create(
+        inline fun <reified T : Document, reified I : T> create(
             table: String,
             serverAddress: String,
 
@@ -23,11 +25,13 @@ interface PostgresPersistence<T : Document> : AdjacentPersistence<T>
             T::class, table, serverAddress, username, password, ssl,
 
             parse = {
-                Klaxon().parse<T>(it)!!
+                Klaxon().parse<I>(it)!!
             },
 
             encode = {
-                Klaxon().toJsonString(it)
+                Parser
+                    .default()
+                    .parse(StringBuilder(Klaxon().toJsonString(it))) as JsonObject
             }
         )
     }
