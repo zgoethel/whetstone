@@ -1,28 +1,23 @@
 plugins {
     kotlin("jvm")
-}
 
-val ktorVersion = "1.3.2"
-
-repositories {
-    mavenCentral()
+    java
 }
 
 dependencies {
-    implementation(kotlin("stdlib-jdk8"))
+    api(project(":common", "default"))
 
-    implementation(project(":common"))
+    implementation(kotlin("stdlib"))
+    implementation(kotlin("reflect"))
 
-    implementation("io.ktor", "ktor-server-netty", ktorVersion)
-    implementation("io.ktor", "ktor-html-builder", ktorVersion)
+    implementation("com.beust", "klaxon", "5.4")
+    implementation("org.postgresql", "postgresql", "42.2.15")
+    implementation("javassist", "javassist", "3.12.1.GA")
 
-    implementation("ch.qos.logback", "logback-classic", "1.2.3")
+    testImplementation("junit", "junit", "4.13")
+}
 
-    implementation("org.postgresql", "postgresql", "42.1.4")
-
-    implementation("com.beust", "klaxon", "5.2")
-    implementation("org.json", "json", "20200518")
-
-    testImplementation(kotlin("test"))
-    testImplementation(kotlin("test-junit"))
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
 }

@@ -1,5 +1,5 @@
 rootProject.name = "whetstone"
 
-include "server"
-include 'common'
+include "common"
+include 'server'
 
