@@ -10,7 +10,9 @@ dependencies {
     implementation(kotlin("stdlib"))
     implementation(kotlin("reflect"))
 
-    implementation("com.beust", "klaxon", "5.4")
+
+    api("com.beust", "klaxon", "5.4")
+
     implementation("org.postgresql", "postgresql", "42.2.15")
     implementation("javassist", "javassist", "3.12.1.GA")
 

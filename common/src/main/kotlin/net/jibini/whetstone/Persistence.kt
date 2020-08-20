@@ -2,7 +2,7 @@ package net.jibini.whetstone
 
 interface Persistence<T : Document>
 {
-    val tank: List<T>
+    val tank: Iterable<T>
 
     fun writeThrough(value: T)
 }

@@ -1,27 +1,33 @@
 package net.jibini.whetstone.sql.impl
 
+import com.beust.klaxon.JsonObject
+import com.beust.klaxon.Parser
 import net.jibini.whetstone.Document
+import net.jibini.whetstone.impl.AbstractAdjacentPersistence
 import net.jibini.whetstone.logging.Logger
 import net.jibini.whetstone.sql.PostgresPersistence
 import java.sql.Connection
 import java.sql.DriverManager
 import java.util.*
+import kotlin.reflect.KClass
 
 class PostgresPersistenceImpl<T : Document>(
-    private val table: String,
+    documentClass: KClass<T>,
 
+    private val table: String,
     private val serverAddress: String,
+
     username: String,
     password: String,
     ssl: Boolean,
 
-    private val parse: (json: String) -> T,
-    private val encode: (document: T) -> String
-) : PostgresPersistence<T>
+    parse: (json: String) -> T,
+    encode: (document: Document) -> JsonObject
+) : AbstractAdjacentPersistence<T>(documentClass, parse, encode), PostgresPersistence<T>
 {
     private val logger = Logger.create<PostgresPersistence<*>>()
 
-    override val tank: List<T>
+    override val tank: Iterable<T>
         get()
         {
             return _tank
@@ -59,6 +65,15 @@ class PostgresPersistenceImpl<T : Document>(
             .createStatement()
             .executeQuery(String.format(SQL_QUERY_SELECT_ALL, table))
 
+        while (results.next())
+        {
+            val data = Parser
+                .default()
+                .parse(StringBuilder(results.getString("data"))) as JsonObject
+
+            
+        }
+
         _tank = mutableListOf()
 
         TODO("PARSE/LINK ALL MASS-LOADED VALUES")
@@ -72,15 +87,22 @@ class PostgresPersistenceImpl<T : Document>(
             _connection = DriverManager.getConnection(serverAddress, properties)
         }
 
-        TODO("WRITE THROUGH DATA TO DATABASE AND ADJACENT PERSISTENCE ENGINES")
+        val json = encode(value)
+
+        TODO("WRITE THROUGH DATA TO ADJACENT")
+
+        _connection
+            .createStatement()
+            .execute(String.format(SQL_QUERY_PUT_VALUE, table, json.toString().replace("'", "''")))
     }
 
     companion object
     {
         private const val SQL_QUERY_CREATE_TABLE = "create table if not exists %s(_row serial primary key, data jsonb);"
 
-        private const val SQL_QUERY_SELECT_ALL = "select * from %s;"
-
         private const val SQL_QUERY_PUT_VALUE = "insert into %s(data) values ('%s');"
+
+        private const val SQL_QUERY_SELECT_ALL = "select distinct on (data->'_uid') data from %s " +
+                "order by data->'_uid' asc, _row desc"
     }
 }
