@@ -89,7 +89,7 @@ class PostgresPersistenceImpl<T : Document>(
     {
         if (!_connection.isValid(4))
         {
-            logger.debug("Connection to '$serverAddress' is dead or invalid, re-connecting . . .")
+            logger.error("Connection to '$serverAddress' is dead or invalid, re-connecting . . .")
             _connection = DriverManager.getConnection(serverAddress, properties)
         }
 

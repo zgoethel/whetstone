@@ -6,7 +6,6 @@ import com.beust.klaxon.Parser
 import net.jibini.whetstone.Adjacent
 import net.jibini.whetstone.AdjacentPersistence
 import net.jibini.whetstone.Document
-import net.jibini.whetstone.proxy.Proxy
 import java.lang.reflect.ParameterizedType
 import kotlin.reflect.KClass
 import kotlin.reflect.KMutableProperty
@@ -131,7 +130,7 @@ abstract class AbstractAdjacentPersistence<T : Document>(
                             // Link each adjacent document as a proxy to its persistence object
                             MutableList::class.java.methods
                                 .find { it.name == "add" && it.parameters.size == 1 }!!
-                                .invoke(propertyValue, Proxy.create<Any>(subClass.kotlin) {
+                                .invoke(propertyValue, AdjacentProxyFactory.create<Any>(subClass.kotlin) {
                                     adjacent.tank.last { it._uid == name }
                                 })
                     } else
@@ -144,7 +143,7 @@ abstract class AbstractAdjacentPersistence<T : Document>(
                     val name = json.string(property.name)
                     val subClass = property.returnType.classifier as KClass<*>
 
-                    property.setter.call(parsed, Proxy.create<Any>(subClass) {
+                    property.setter.call(parsed, AdjacentProxyFactory.create<Any>(subClass) {
                         adjacent.tank.last { it._uid == name }
                     })
                 }

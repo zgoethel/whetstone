@@ -1,6 +1,7 @@
-package net.jibini.whetstone.proxy
+package net.jibini.whetstone
 
 import com.beust.klaxon.Klaxon
+import net.jibini.whetstone.impl.AdjacentProxyFactory
 import org.junit.Assert
 import org.junit.Test
 
@@ -38,7 +39,7 @@ class TestObjectProxying
     fun proxyObjectUnchanging()
     {
         val base = TestString.create("Hello, world!")
-        val proxy = Proxy.create(base)
+        val proxy = AdjacentProxyFactory.create(base)
 
         Assert.assertEquals("Hello, world!", proxy.value)
 
@@ -53,7 +54,7 @@ class TestObjectProxying
         val sources = listOf(TestStringImpl("Hello, world!"), TestStringImpl("Foo Bar"))
 
         var index = 0
-        val proxy = Proxy.create<TestString> { sources[index++] }
+        val proxy = AdjacentProxyFactory.create<TestString> { sources[index++] }
 
         Assert.assertEquals("Hello, world!", proxy.value)
         Assert.assertEquals("Foo Bar", proxy.value)
@@ -62,7 +63,7 @@ class TestObjectProxying
     @Test
     fun serializeObjectWithProxies()
     {
-        val proxyObject = Proxy.create(TestString.create("Hello, world!"))
+        val proxyObject = AdjacentProxyFactory.create(TestString.create("Hello, world!"))
         val carrier = TestStringCarrier.create(proxyObject)
 
         Assert.assertEquals("{\"testString\" : {\"value\" : \"Hello, world!\"}}",
