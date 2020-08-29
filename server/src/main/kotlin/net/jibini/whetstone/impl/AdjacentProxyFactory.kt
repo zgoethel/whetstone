@@ -1,7 +1,7 @@
 package net.jibini.whetstone.impl
 
 import net.jibini.whetstone.Adjacent
-import net.jibini.whetstone.AdjacentPersistence
+import net.jibini.whetstone.logging.Logger
 import java.lang.reflect.Method
 import kotlin.reflect.KClass
 import kotlin.reflect.KMutableProperty
@@ -12,6 +12,8 @@ import kotlin.reflect.jvm.javaSetter
 
 object AdjacentProxyFactory
 {
+    private val logger = Logger.create<AdjacentProxyFactory>()
+
     @Suppress("UNCHECKED_CAST")
     fun <T : Any> create(baseClass: KClass<*>, baseProvider: () -> T) = java.lang.reflect.Proxy.newProxyInstance(
         baseClass.java.classLoader, arrayOf(baseClass.java)) {
@@ -35,7 +37,7 @@ object AdjacentProxyFactory
         if (adjacent != null)
         {
             //TODO
-            println("Adjacent is not null $adjacent")
+            logger.debug("Adjacent document is located in persistence '${adjacent::class.simpleName}'")
             method.invoke(baseProvider(), *(args ?: arrayOf()))
         } else
             method.invoke(baseProvider(), *(args ?: arrayOf()))

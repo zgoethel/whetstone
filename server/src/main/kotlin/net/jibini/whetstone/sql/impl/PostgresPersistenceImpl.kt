@@ -4,6 +4,7 @@ import com.beust.klaxon.JsonObject
 import com.beust.klaxon.Parser
 import net.jibini.whetstone.Document
 import net.jibini.whetstone.impl.AbstractAdjacentPersistence
+import net.jibini.whetstone.impl.AdjacentProxyFactory
 import net.jibini.whetstone.logging.Logger
 import net.jibini.whetstone.sql.PostgresPersistence
 import java.lang.IllegalStateException
@@ -66,6 +67,7 @@ class PostgresPersistenceImpl<T : Document>(
             .createStatement()
             .executeQuery(String.format(SQL_QUERY_SELECT_ALL, table))
 
+        //TODO CREATE PROXY TO JSON AT OBJECT LEVEL, NOT OBJECT MEMBER LEVEL
         logger.debug("Filling out the tank's adjacent proxy links . . .")
         _tank = mutableListOf()
 
@@ -76,7 +78,8 @@ class PostgresPersistenceImpl<T : Document>(
                     .default()
                     .parse(StringBuilder(results.getString("data"))) as JsonObject
 
-                val filled = fillOut(data)
+                val f =  fillOut(data)
+                val filled = AdjacentProxyFactory.create(documentClass) { f }
                 _tank.add(filled)
             } catch (ex: IllegalStateException)
             {

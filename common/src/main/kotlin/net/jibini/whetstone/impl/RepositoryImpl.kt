@@ -13,7 +13,7 @@ class RepositoryImpl<T : Document>(
     private val persistence: Persistence<T>
 ) : Repository<T>, Iterable<T> by persistence.tank
 {
-    private val logger = Logger.create<RepositoryImpl<*>>()
+    private val logger = Logger.create<Repository<*>>()
 
     init
     {
